@@ -2,18 +2,18 @@ FROM azul/zulu-openjdk
 
 # install tomcat
 ENV TOMCAT_MAJOR_VERSION 8
-ENV TOMCAT_VERSION 8.0.20
+ENV TOMCAT_VERSION 8.0.30
 RUN apt-get update \
   && apt-get -y install curl \
   && curl http://archive.apache.org/dist/tomcat/tomcat-$TOMCAT_MAJOR_VERSION/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz \
-       | tar xzf - -C /usr/share \
+       | tar xz -C /usr/share \
   && mv /usr/share/apache-tomcat-$TOMCAT_VERSION /usr/share/tomcat \
   && rm -r /usr/share/tomcat/webapps/* \
   && apt-get -y purge --auto-remove curl \
   && rm -r /var/lib/apt/lists/*
 
 # install mariadb
-ENV MARIADB_MAJOR_VERSION 10.0
+ENV MARIADB_MAJOR_VERSION 10.1
 RUN apt-get update \
   && apt-get -y install software-properties-common \
   && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xcbcb082a1bb943db \
@@ -37,13 +37,13 @@ RUN /etc/init.d/mysql start \
 
 # build and install heatclinic war
 ENV MAVEN_MAJOR_VERSION 3
-ENV MAVEN_VERSION 3.3.1
-ENV HEATCLINIC_VERSION 3.1.12-GA
+ENV MAVEN_VERSION 3.3.9
+ENV HEATCLINIC_VERSION 4.0.5-GA
 COPY ehcache.xml /
 RUN apt-get update \
   && apt-get -y install curl git \
   && curl http://archive.apache.org/dist/maven/maven-$MAVEN_MAJOR_VERSION/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz \
-       | tar xzf - -C /usr/share \
+       | tar xz -C /usr/share \
   && mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven \
   && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
   && git clone https://github.com/BroadleafCommerce/DemoSite.git heatclinic \
@@ -54,6 +54,7 @@ RUN apt-get update \
   && mkdir /usr/share/tomcat/heatclinic \
   && cp heatclinic/lib/spring-instrument-*.RELEASE.jar /usr/share/tomcat/heatclinic/spring-instrument.jar \
   && cp heatclinic/site/target/mycompany.war /usr/share/tomcat/webapps/ROOT.war \
+  && cp heatclinic/lib/tomcat-server-conf/context.xml /usr/share/tomcat/conf \
   && rm ehcache.xml \
   && rm -r heatclinic \
   && rm -r ~/.m2 \
@@ -63,7 +64,7 @@ RUN apt-get update \
   && rm -r /var/lib/apt/lists/*
 
 # install mariadb jdbc driver
-ENV MARIADB_JDBC_DRIVER_VERSION 1.1.8
+ENV MARIADB_JDBC_DRIVER_VERSION 1.3.2
 RUN apt-get update \
   && apt-get -y install curl \
   && curl http://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIADB_JDBC_DRIVER_VERSION/mariadb-java-client-$MARIADB_JDBC_DRIVER_VERSION.jar \
@@ -74,7 +75,7 @@ RUN apt-get update \
 # create heatclinic database
 ENV HEATCLINIC_OPTS \
   -javaagent:/usr/share/tomcat/heatclinic/spring-instrument.jar \
-  -Ddatabase.url=jdbc:mysql://localhost:3306/heatclinic?useUnicode=true\&characterEncoding=utf8 \
+  -Ddatabase.url=jdbc:mysql://localhost:3306/heatclinic?useUnicode=true\\&characterEncoding=utf8 \
   -Ddatabase.user=heatclinic \
   -Ddatabase.password=heatclinic \
   -Ddatabase.driver=org.mariadb.jdbc.Driver \
@@ -92,9 +93,10 @@ RUN /etc/init.d/mysql start \
 COPY heatclinic.properties /usr/share/tomcat/heatclinic/
 
 # install glowroot
+ENV GLOWROOT_VERSION 0.8.6
 RUN apt-get update \
   && apt-get -y install curl unzip \
-  && curl https://glowroot.s3.amazonaws.com/snapshots/latest/glowroot-dist.zip > glowroot-dist.zip \
+  && curl -L https://github.com/glowroot/glowroot/releases/download/v$GLOWROOT_VERSION/glowroot-$GLOWROOT_VERSION-dist.zip > glowroot-dist.zip \
   && unzip glowroot-dist.zip -d /usr/share/tomcat \
   && rm glowroot-dist.zip \
   && apt-get -y purge --auto-remove curl unzip \
